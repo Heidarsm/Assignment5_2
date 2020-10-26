@@ -5,18 +5,15 @@
 #include<stdio.h>
 #include<fcntl.h>
 #include<unistd.h>
+#include<stdint.h>
+#include <stdlib.h>
 #include<termios.h>
 #include<string.h>
-#include<stdint.h>
+#define msgLen 2
 
 int main(int argc, char *argv[]){
    int file, count;
-
-   /*
-   Hér ætti að koma cast eða convertion frá char* argv
-   yfir í uint8_t, en ég næ ekki að fá þá til að virka. 
-   sama hvað ég reyni.
-   */
+   uint8_t msg[msgLen];
 
    if(argc!=2){
        printf("Invalid number of arguments, exiting!\n");
@@ -32,13 +29,18 @@ int main(int argc, char *argv[]){
 
    tcgetattr(file, &options);
 
+   //cfmakeraw(&options);
+
    options.c_cflag = B9600 | CS8 | CREAD | CLOCAL;
    options.c_iflag = IGNPAR | ICRNL;
+   options.c_lflag &= ~ (ECHO | ICANON);
    tcflush(file, TCIFLUSH);
    tcsetattr(file, TCSANOW, &options);
 
    // send the string plus the null character
-   if ((count = write(file, argv[1], strlen(argv[1])+1))<0){
+   msg[1] = atoi(argv[1]);	// breyta argv í int
+   
+   if ((count = write(file, msg, msgLen))<0){
       perror("Failed to write to the output\n");
       return -1;
    }
@@ -55,7 +57,7 @@ int main(int argc, char *argv[]){
    if (count==0) printf("There was no data available to read!\n");
    else {
       receive[count]=0;  //There is no null character sent by the Arduino
-      printf("The following was read in [%d]: %s\n",count,receive);
+      printf("The following was read in [%d]: %s",count,receive);
    }
 
    close(file);
